@@ -211,7 +211,7 @@
 <div class="app">
   <header>
     <h1>🇦🇷 Conversor de Pesos</h1>
-    <p>Peso, Real e Dólar — digite em qualquer campo</p>
+    <p>Peso, Real e Dólar blue — digite em qualquer campo</p>
   </header>
 
   <div class="card">
@@ -238,19 +238,11 @@
     <div class="divider"></div>
 
     <div class="field">
-      <label>Dólares (oficial)</label>
+      <label>Dólares (paralelo/blue)</label>
       <div class="amount-row">
         <span class="flag">🇺🇸</span>
         <input type="text" inputmode="decimal" id="usdInput" value="0" autocomplete="off">
         <span class="currency-code">USD</span>
-      </div>
-    </div>
-
-    <div class="results" style="margin-top:14px;">
-      <div class="result-row secondary">
-        <span class="flag">🇺🇸</span>
-        <span class="value" id="usdBlueValue">0,00</span>
-        <span class="meta"><span class="code">USD</span><span class="code" style="font-weight:400;">Dólar blue (referência)</span></span>
       </div>
     </div>
 
@@ -272,11 +264,11 @@
 
 <script>
 (function(){
-  var STORAGE_KEY = 'conversorArsRatesV2';
+  var STORAGE_KEY = 'conversorArsRatesV3';
   var REFRESH_MS = 5 * 60 * 1000;
 
   var state = {
-    rates: null, // { usd: {oficial, blue}, brl, updatedAt }
+    rates: null, // { usd: {blue}, brl, updatedAt }
     lastSource: 'ars'
   };
 
@@ -284,7 +276,6 @@
     arsInput: document.getElementById('arsInput'),
     brlInput: document.getElementById('brlInput'),
     usdInput: document.getElementById('usdInput'),
-    usdBlueValue: document.getElementById('usdBlueValue'),
     rateText: document.getElementById('rateText'),
     statusDot: document.getElementById('statusDot'),
     refreshBtn: document.getElementById('refreshBtn'),
@@ -303,10 +294,7 @@
   function avg(a,b){ return (Number(a) + Number(b)) / 2; }
 
   function recalc(source){
-    if (!state.rates){
-      el.usdBlueValue.textContent = '—';
-      return;
-    }
+    if (!state.rates) return;
 
     var ars;
     if (source === 'brl'){
@@ -314,7 +302,7 @@
       ars = isNaN(brl) ? NaN : brl * state.rates.brl;
     } else if (source === 'usd'){
       var usd = parseNum(el.usdInput.value);
-      ars = isNaN(usd) ? NaN : usd * state.rates.usd.oficial;
+      ars = isNaN(usd) ? NaN : usd * state.rates.usd.blue;
     } else {
       ars = parseNum(el.arsInput.value);
     }
@@ -323,14 +311,12 @@
       if (source !== 'ars') el.arsInput.value = '';
       if (source !== 'brl') el.brlInput.value = '';
       if (source !== 'usd') el.usdInput.value = '';
-      el.usdBlueValue.textContent = '—';
       return;
     }
 
     if (source !== 'ars') el.arsInput.value = fmt(ars);
     if (source !== 'brl') el.brlInput.value = fmt(ars / state.rates.brl);
-    if (source !== 'usd') el.usdInput.value = fmt(ars / state.rates.usd.oficial);
-    el.usdBlueValue.textContent = fmt(ars / state.rates.usd.blue);
+    if (source !== 'usd') el.usdInput.value = fmt(ars / state.rates.usd.blue);
   }
 
   function updateRateText(){
@@ -340,7 +326,7 @@
     }
     el.rateText.textContent =
       '1 BRL = AR$ ' + fmt(state.rates.brl) +
-      ' · 1 USD = AR$ ' + fmt(state.rates.usd.oficial) + ' (of.) / AR$ ' + fmt(state.rates.usd.blue) + ' (blue)';
+      ' · 1 USD (blue) = AR$ ' + fmt(state.rates.usd.blue);
   }
 
   function setStatus(kind, msg){
@@ -383,14 +369,13 @@
       var dolares = results[0];
       var cotizaciones = results[1];
 
-      var oficial = dolares.find(function(d){ return d.casa === 'oficial'; });
       var blue = dolares.find(function(d){ return d.casa === 'blue'; });
       var brl = cotizaciones.find(function(c){ return c.moneda === 'BRL'; });
 
-      if (!oficial || !blue || !brl) throw new Error('Dados incompletos da API');
+      if (!blue || !brl) throw new Error('Dados incompletos da API');
 
       state.rates = {
-        usd: { oficial: avg(oficial.compra, oficial.venta), blue: avg(blue.compra, blue.venta) },
+        usd: { blue: avg(blue.compra, blue.venta) },
         brl: avg(brl.compra, brl.venta),
         updatedAt: new Date().toISOString()
       };
