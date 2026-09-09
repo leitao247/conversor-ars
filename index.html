@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Conversor Peso Argentino</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root{
+    --bg:#f5f6fa;
+    --card:#ffffff;
+    --text:#12131a;
+    --muted:#6b7280;
+    --accent:#2563eb;
+    --accent-2:#16a34a;
+    --border:#e5e7eb;
+    --danger:#dc2626;
+    --shadow: 0 8px 24px rgba(15,23,42,0.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0d14;
+      --card:#151823;
+      --text:#f2f3f7;
+      --muted:#9aa0ac;
+      --accent:#5b8def;
+      --accent-2:#34d399;
+      --border:#262b3a;
+      --shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  }
+  .app{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  header{
+    text-align:center;
+    padding: 8px 0 4px;
+  }
+  header h1{
+    font-size:20px;
+    margin:0 0 4px;
+    font-weight:700;
+  }
+  header p{
+    margin:0;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:18px;
+    box-shadow:var(--shadow);
+  }
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .field label{
+    font-size:12px;
+    font-weight:600;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .amount-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .flag{
+    font-size:28px;
+    line-height:1;
+  }
+  input[type="text"]{
+    flex:1;
+    min-width:0;
+    font-size:30px;
+    font-weight:700;
+    border:none;
+    background:transparent;
+    color:var(--text);
+    outline:none;
+    font-variant-numeric: tabular-nums;
+  }
+  .currency-code{
+    font-size:15px;
+    font-weight:700;
+    color:var(--muted);
+  }
+  .divider{
+    height:1px;
+    background:var(--border);
+    margin:14px 0;
+  }
+  .results{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .result-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .result-row .value{
+    flex:1;
+    min-width:0;
+    font-size:24px;
+    font-weight:700;
+    font-variant-numeric: tabular-nums;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .result-row .meta{
+    display:flex;
+    flex-direction:column;
+  }
+  .result-row .meta .code{
+    font-size:13px;
+    font-weight:700;
+    color:var(--muted);
+  }
+  .result-row.secondary .value{
+    font-size:18px;
+  }
+  .result-row.secondary .meta .code{
+    font-size:11.5px;
+  }
+  .rate-line{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:12.5px;
+    color:var(--muted);
+    padding:2px 4px;
+    margin-top:14px;
+  }
+  .status{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--accent-2);
+    flex:none;
+  }
+  .dot.stale{ background:#f59e0b; }
+  .dot.error{ background:var(--danger); }
+  .refresh-btn{
+    border:none;
+    background:transparent;
+    color:var(--accent);
+    font-size:12.5px;
+    font-weight:700;
+    cursor:pointer;
+    padding:4px 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .refresh-btn[disabled]{
+    opacity:.5;
+  }
+  .error-box{
+    display:none;
+    font-size:12.5px;
+    color:var(--danger);
+    background: rgba(220,38,38,0.08);
+    border:1px solid rgba(220,38,38,0.3);
+    border-radius:10px;
+    padding:8px 10px;
+    margin-top:10px;
+  }
+  footer{
+    text-align:center;
+    font-size:11px;
+    color:var(--muted);
+    padding-bottom:8px;
+  }
+  .spin{
+    animation: spin 0.8s linear infinite;
+    display:inline-block;
+  }
+  @keyframes spin{ to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🇦🇷 Conversor de Pesos</h1>
+    <p>Peso argentino → Real e Dólar, cotação ao vivo</p>
+  </header>
+
+  <div class="card">
+    <div class="field">
+      <label>Pesos argentinos</label>
+      <div class="amount-row">
+        <span class="flag">🇦🇷</span>
+        <input type="text" inputmode="decimal" id="arsInput" value="1000" autocomplete="off">
+        <span class="currency-code">ARS</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="results">
+      <div class="result-row">
+        <span class="flag">🇧🇷</span>
+        <span class="value" id="brlValue">0,00</span>
+        <span class="meta"><span class="code">BRL</span><span class="code" style="font-weight:400;">Real</span></span>
+      </div>
+      <div class="result-row">
+        <span class="flag">🇺🇸</span>
+        <span class="value" id="usdOficialValue">0,00</span>
+        <span class="meta"><span class="code">USD</span><span class="code" style="font-weight:400;">Dólar oficial</span></span>
+      </div>
+      <div class="result-row secondary">
+        <span class="flag">🇺🇸</span>
+        <span class="value" id="usdBlueValue">0,00</span>
+        <span class="meta"><span class="code">USD</span><span class="code" style="font-weight:400;">Dólar blue</span></span>
+      </div>
+    </div>
+
+    <div class="rate-line">
+      <span id="rateText">Carregando cotação…</span>
+      <span class="status">
+        <span class="dot" id="statusDot"></span>
+        <button class="refresh-btn" id="refreshBtn">↻ atualizar</button>
+      </span>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <footer>
+    Fonte: dolarapi.com · atualiza sozinho a cada 5 min<br>
+    Cotações informativas, não substituem sua casa de câmbio.
+  </footer>
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'conversorArsRatesV2';
+  var REFRESH_MS = 5 * 60 * 1000;
+
+  var state = {
+    rates: null // { usd: {oficial, blue}, brl, updatedAt }
+  };
+
+  var el = {
+    arsInput: document.getElementById('arsInput'),
+    brlValue: document.getElementById('brlValue'),
+    usdOficialValue: document.getElementById('usdOficialValue'),
+    usdBlueValue: document.getElementById('usdBlueValue'),
+    rateText: document.getElementById('rateText'),
+    statusDot: document.getElementById('statusDot'),
+    refreshBtn: document.getElementById('refreshBtn'),
+    errorBox: document.getElementById('errorBox')
+  };
+
+  function fmt(n){
+    if (!isFinite(n)) return '—';
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function parseNum(s){
+    if (typeof s !== 'string') return NaN;
+    var clean = s.replace(/\./g,'').replace(',', '.').replace(/[^\d.\-]/g,'');
+    return parseFloat(clean);
+  }
+  function avg(a,b){ return (Number(a) + Number(b)) / 2; }
+
+  function recalc(){
+    var ars = parseNum(el.arsInput.value);
+    if (!state.rates || isNaN(ars)){
+      el.brlValue.textContent = '—';
+      el.usdOficialValue.textContent = '—';
+      el.usdBlueValue.textContent = '—';
+      return;
+    }
+    el.brlValue.textContent = fmt(ars / state.rates.brl);
+    el.usdOficialValue.textContent = fmt(ars / state.rates.usd.oficial);
+    el.usdBlueValue.textContent = fmt(ars / state.rates.usd.blue);
+  }
+
+  function updateRateText(){
+    if (!state.rates){
+      el.rateText.textContent = 'Cotação indisponível';
+      return;
+    }
+    el.rateText.textContent =
+      '1 BRL = AR$ ' + fmt(state.rates.brl) +
+      ' · 1 USD = AR$ ' + fmt(state.rates.usd.oficial) + ' (of.) / AR$ ' + fmt(state.rates.usd.blue) + ' (blue)';
+  }
+
+  function setStatus(kind, msg){
+    el.statusDot.className = 'dot' + (kind === 'ok' ? '' : ' ' + kind);
+    if (msg){
+      el.errorBox.style.display = 'block';
+      el.errorBox.textContent = msg;
+    } else {
+      el.errorBox.style.display = 'none';
+      el.errorBox.textContent = '';
+    }
+  }
+
+  function saveCache(){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.rates)); } catch(e){}
+  }
+  function loadCache(){
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch(e){}
+    return null;
+  }
+
+  function fetchRates(){
+    el.refreshBtn.disabled = true;
+    el.refreshBtn.innerHTML = '<span class="spin">↻</span> atualizando';
+    setStatus('stale', null);
+
+    Promise.all([
+      fetch('https://dolarapi.com/v1/dolares').then(function(r){
+        if (!r.ok) throw new Error('dolares ' + r.status);
+        return r.json();
+      }),
+      fetch('https://dolarapi.com/v1/cotizaciones').then(function(r){
+        if (!r.ok) throw new Error('cotizaciones ' + r.status);
+        return r.json();
+      })
+    ]).then(function(results){
+      var dolares = results[0];
+      var cotizaciones = results[1];
+
+      var oficial = dolares.find(function(d){ return d.casa === 'oficial'; });
+      var blue = dolares.find(function(d){ return d.casa === 'blue'; });
+      var brl = cotizaciones.find(function(c){ return c.moneda === 'BRL'; });
+
+      if (!oficial || !blue || !brl) throw new Error('Dados incompletos da API');
+
+      state.rates = {
+        usd: { oficial: avg(oficial.compra, oficial.venta), blue: avg(blue.compra, blue.venta) },
+        brl: avg(brl.compra, brl.venta),
+        updatedAt: new Date().toISOString()
+      };
+      saveCache();
+      setStatus('ok', null);
+      updateRateText();
+      recalc();
+    }).catch(function(err){
+      var cached = state.rates || loadCache();
+      if (cached){
+        state.rates = cached;
+        setStatus('stale', 'Sem conexão com a API agora. Mostrando última cotação salva (' + new Date(cached.updatedAt).toLocaleString('pt-BR') + ').');
+      } else {
+        setStatus('error', 'Não foi possível carregar a cotação. Verifique sua internet e tente atualizar.');
+      }
+      updateRateText();
+      recalc();
+    }).finally(function(){
+      el.refreshBtn.disabled = false;
+      el.refreshBtn.innerHTML = '↻ atualizar';
+    });
+  }
+
+  el.arsInput.addEventListener('input', recalc);
+  el.refreshBtn.addEventListener('click', fetchRates);
+
+  var cached = loadCache();
+  if (cached){
+    state.rates = cached;
+    updateRateText();
+    recalc();
+  }
+  fetchRates();
+  setInterval(fetchRates, REFRESH_MS);
+})();
+</script>
+</body>
+</html>
