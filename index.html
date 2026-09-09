@@ -211,7 +211,7 @@
 <div class="app">
   <header>
     <h1>🇦🇷 Conversor de Pesos</h1>
-    <p>Peso argentino → Real e Dólar, cotação ao vivo</p>
+    <p>Peso, Real e Dólar — digite em qualquer campo</p>
   </header>
 
   <div class="card">
@@ -226,21 +226,31 @@
 
     <div class="divider"></div>
 
-    <div class="results">
-      <div class="result-row">
+    <div class="field">
+      <label>Reais</label>
+      <div class="amount-row">
         <span class="flag">🇧🇷</span>
-        <span class="value" id="brlValue">0,00</span>
-        <span class="meta"><span class="code">BRL</span><span class="code" style="font-weight:400;">Real</span></span>
+        <input type="text" inputmode="decimal" id="brlInput" value="0" autocomplete="off">
+        <span class="currency-code">BRL</span>
       </div>
-      <div class="result-row">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field">
+      <label>Dólares (oficial)</label>
+      <div class="amount-row">
         <span class="flag">🇺🇸</span>
-        <span class="value" id="usdOficialValue">0,00</span>
-        <span class="meta"><span class="code">USD</span><span class="code" style="font-weight:400;">Dólar oficial</span></span>
+        <input type="text" inputmode="decimal" id="usdInput" value="0" autocomplete="off">
+        <span class="currency-code">USD</span>
       </div>
+    </div>
+
+    <div class="results" style="margin-top:14px;">
       <div class="result-row secondary">
         <span class="flag">🇺🇸</span>
         <span class="value" id="usdBlueValue">0,00</span>
-        <span class="meta"><span class="code">USD</span><span class="code" style="font-weight:400;">Dólar blue</span></span>
+        <span class="meta"><span class="code">USD</span><span class="code" style="font-weight:400;">Dólar blue (referência)</span></span>
       </div>
     </div>
 
@@ -266,13 +276,14 @@
   var REFRESH_MS = 5 * 60 * 1000;
 
   var state = {
-    rates: null // { usd: {oficial, blue}, brl, updatedAt }
+    rates: null, // { usd: {oficial, blue}, brl, updatedAt }
+    lastSource: 'ars'
   };
 
   var el = {
     arsInput: document.getElementById('arsInput'),
-    brlValue: document.getElementById('brlValue'),
-    usdOficialValue: document.getElementById('usdOficialValue'),
+    brlInput: document.getElementById('brlInput'),
+    usdInput: document.getElementById('usdInput'),
     usdBlueValue: document.getElementById('usdBlueValue'),
     rateText: document.getElementById('rateText'),
     statusDot: document.getElementById('statusDot'),
@@ -291,16 +302,34 @@
   }
   function avg(a,b){ return (Number(a) + Number(b)) / 2; }
 
-  function recalc(){
-    var ars = parseNum(el.arsInput.value);
-    if (!state.rates || isNaN(ars)){
-      el.brlValue.textContent = '—';
-      el.usdOficialValue.textContent = '—';
+  function recalc(source){
+    if (!state.rates){
       el.usdBlueValue.textContent = '—';
       return;
     }
-    el.brlValue.textContent = fmt(ars / state.rates.brl);
-    el.usdOficialValue.textContent = fmt(ars / state.rates.usd.oficial);
+
+    var ars;
+    if (source === 'brl'){
+      var brl = parseNum(el.brlInput.value);
+      ars = isNaN(brl) ? NaN : brl * state.rates.brl;
+    } else if (source === 'usd'){
+      var usd = parseNum(el.usdInput.value);
+      ars = isNaN(usd) ? NaN : usd * state.rates.usd.oficial;
+    } else {
+      ars = parseNum(el.arsInput.value);
+    }
+
+    if (isNaN(ars)){
+      if (source !== 'ars') el.arsInput.value = '';
+      if (source !== 'brl') el.brlInput.value = '';
+      if (source !== 'usd') el.usdInput.value = '';
+      el.usdBlueValue.textContent = '—';
+      return;
+    }
+
+    if (source !== 'ars') el.arsInput.value = fmt(ars);
+    if (source !== 'brl') el.brlInput.value = fmt(ars / state.rates.brl);
+    if (source !== 'usd') el.usdInput.value = fmt(ars / state.rates.usd.oficial);
     el.usdBlueValue.textContent = fmt(ars / state.rates.usd.blue);
   }
 
@@ -368,7 +397,7 @@
       saveCache();
       setStatus('ok', null);
       updateRateText();
-      recalc();
+      recalc(state.lastSource);
     }).catch(function(err){
       var cached = state.rates || loadCache();
       if (cached){
@@ -378,21 +407,23 @@
         setStatus('error', 'Não foi possível carregar a cotação. Verifique sua internet e tente atualizar.');
       }
       updateRateText();
-      recalc();
+      recalc(state.lastSource);
     }).finally(function(){
       el.refreshBtn.disabled = false;
       el.refreshBtn.innerHTML = '↻ atualizar';
     });
   }
 
-  el.arsInput.addEventListener('input', recalc);
+  el.arsInput.addEventListener('input', function(){ state.lastSource = 'ars'; recalc('ars'); });
+  el.brlInput.addEventListener('input', function(){ state.lastSource = 'brl'; recalc('brl'); });
+  el.usdInput.addEventListener('input', function(){ state.lastSource = 'usd'; recalc('usd'); });
   el.refreshBtn.addEventListener('click', fetchRates);
 
   var cached = loadCache();
   if (cached){
     state.rates = cached;
     updateRateText();
-    recalc();
+    recalc('ars');
   }
   fetchRates();
   setInterval(fetchRates, REFRESH_MS);
